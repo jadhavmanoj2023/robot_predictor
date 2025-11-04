@@ -1,0 +1,27 @@
+# Node
+frontend/node_modules/
+frontend/build/
+frontend/.env
+
+# Python
+backend/__pycache__/
+backend/venv/
+*.pyc
+*.pyo
+*.pyd
+*.db
+
+# VS Code & system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs & temporary files
+*.log
+*.tmp
+*.bak
+
+# Environment and credentials
+.env
+.env.local
