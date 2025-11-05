@@ -1,22 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Clock, AlertCircle, CheckCircle, Zap } from 'lucide-react';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import {
+  Plus,
+  Trash2,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  Zap,
+  BarChart3,
+} from "lucide-react";
+import "./App.css";
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = "http://localhost:8000";
 
 const RobotMotionControl = () => {
   const [robotModels, setRobotModels] = useState([]);
-  const [selectedRobot, setSelectedRobot] = useState('');
-  const [motionType, setMotionType] = useState('Pick & Place');
+  const [selectedRobot, setSelectedRobot] = useState("");
+  const [motionType, setMotionType] = useState("Pick & Place");
   const [jointId, setJointId] = useState(1);
   const [currentPos, setCurrentPos] = useState(0.0);
   const [desiredPos, setDesiredPos] = useState(45.0);
   const [desiredVel, setDesiredVel] = useState(2.0);
   const [jointQueue, setJointQueue] = useState([]);
   const [timeResult, setTimeResult] = useState(null);
+  const [visualizationData, setVisualizationData] = useState(null);
+  const [showVisualization, setShowVisualization] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     fetchRobotModels();
@@ -29,21 +39,21 @@ const RobotMotionControl = () => {
       setRobotModels(data.models);
       if (data.models.length > 0) setSelectedRobot(data.models[0]);
     } catch (err) {
-      setError('Failed to load robot models. Make sure backend is running.');
+      setError("Failed to load robot models. Make sure backend is running.");
     }
   };
 
   const addJoint = async () => {
-    setError('');
-    setSuccess('');
-    
+    setError("");
+    setSuccess("");
+
     if (jointQueue.length > 0) {
       if (jointQueue[0].robot_model !== selectedRobot) {
-        setError('Cannot mix different robot models in one task!');
+        setError("Cannot mix different robot models in one task!");
         return;
       }
       if (jointQueue[0].motion_type !== motionType) {
-        setError('Cannot mix different motion types in one task!');
+        setError("Cannot mix different motion types in one task!");
         return;
       }
     }
@@ -51,29 +61,31 @@ const RobotMotionControl = () => {
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE}/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           robot_model: selectedRobot,
           motion_type: motionType,
           joint_id: jointId,
           current_position: currentPos,
           desired_position: desiredPos,
-          desired_velocity: desiredVel
-        })
+          desired_velocity: desiredVel,
+        }),
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         setJointQueue([...jointQueue, data]);
         setSuccess(`Joint ${jointId} added successfully!`);
         setTimeResult(null);
+        setVisualizationData(null);
+        setShowVisualization(false);
       } else {
-        setError(data.detail || 'Prediction failed');
+        setError(data.detail || "Prediction failed");
       }
     } catch (err) {
-      setError('Failed to add joint. Check backend connection.');
+      setError("Failed to add joint. Check backend connection.");
     } finally {
       setLoading(false);
     }
@@ -82,66 +94,235 @@ const RobotMotionControl = () => {
   const clearJoints = () => {
     setJointQueue([]);
     setTimeResult(null);
-    setSuccess('All joints cleared!');
-    setError('');
+    setVisualizationData(null);
+    setShowVisualization(false);
+    setSuccess("All joints cleared!");
+    setError("");
   };
 
   const calculateTime = async () => {
     if (jointQueue.length === 0) {
-      setError('No joint movements added!');
+      setError("No joint movements added!");
       return;
     }
 
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const response = await fetch(`${API_BASE}/calculate-time`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ joints: jointQueue })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ joints: jointQueue }),
       });
 
       const data = await response.json();
-      
+
       if (response.ok) {
         setTimeResult(data);
-        setSuccess('Time calculation completed!');
+        setSuccess("Time calculation completed!");
       } else {
-        setError(data.detail || 'Calculation failed');
+        setError(data.detail || "Calculation failed");
       }
     } catch (err) {
-      setError('Failed to calculate time. Check backend connection.');
+      setError("Failed to calculate time. Check backend connection.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const visualizeCoords = async () => {
+    if (jointQueue.length === 0) {
+      setError("No joint movements added!");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE}/visualize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ joints: jointQueue }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setVisualizationData(data);
+        setShowVisualization(true);
+        setSuccess("Visualization generated!");
+      } else {
+        setError(data.detail || "Visualization failed");
+      }
+    } catch (err) {
+      setError("Failed to generate visualization. Check backend connection.");
     } finally {
       setLoading(false);
     }
   };
 
   const getPerformanceRating = (time) => {
-    if (time < 2) return { label: 'VERY FAST', color: 'rating-very-fast', icon: <Zap className="icon-sm" /> };
-    if (time < 4) return { label: 'FAST', color: 'rating-fast', icon: <CheckCircle className="icon-sm" /> };
-    if (time < 6) return { label: 'MODERATE', color: 'rating-moderate', icon: <Clock className="icon-sm" /> };
-    if (time < 10) return { label: 'SLOW', color: 'rating-slow', icon: <AlertCircle className="icon-sm" /> };
-    return { label: 'VERY SLOW', color: 'rating-very-slow', icon: <AlertCircle className="icon-sm" /> };
+    if (time < 2)
+      return {
+        label: "VERY FAST",
+        color: "rating-very-fast",
+        icon: <Zap className="icon-sm" />,
+      };
+    if (time < 4)
+      return {
+        label: "FAST",
+        color: "rating-fast",
+        icon: <CheckCircle className="icon-sm" />,
+      };
+    if (time < 6)
+      return {
+        label: "MODERATE",
+        color: "rating-moderate",
+        icon: <Clock className="icon-sm" />,
+      };
+    if (time < 10)
+      return {
+        label: "SLOW",
+        color: "rating-slow",
+        icon: <AlertCircle className="icon-sm" />,
+      };
+    return {
+      label: "VERY SLOW",
+      color: "rating-very-slow",
+      icon: <AlertCircle className="icon-sm" />,
+    };
   };
+
+  if (showVisualization && visualizationData) {
+    return (
+      <div className="app-container">
+       
+        <div className="content-wrapper">
+          <button
+            onClick={() => setShowVisualization(false)}
+            className="btn btn-back"
+          >
+            ← Back to Control Panel
+          </button>
+
+          <h1 className="app-title">📊 End-Effector Coordinate Analysis</h1>
+          <p className="app-subtitle">
+            Motion Type: {jointQueue[0]?.motion_type}
+          </p>
+
+          <div className="visualization-container">
+            {/* Coordinate Data */}
+            <div className="card coord-card">
+              <h2 className="card-title">Coordinate Data</h2>
+              <div className="coord-grid">
+                <div className="coord-section">
+                  <h3 className="coord-heading">🎯 Desired Position</h3>
+                  <div className="coord-values">
+                    <div className="coord-item">
+                      X: {visualizationData.coordinates.desired.x.toFixed(4)}m
+                    </div>
+                    <div className="coord-item">
+                      Y: {visualizationData.coordinates.desired.y.toFixed(4)}m
+                    </div>
+                    <div className="coord-item">
+                      Z: {visualizationData.coordinates.desired.z.toFixed(4)}m
+                    </div>
+                  </div>
+                </div>
+                <div className="coord-section">
+                  <h3 className="coord-heading">🔮 Actual Position</h3>
+                  <div className="coord-values">
+                    <div className="coord-item">
+                      X: {visualizationData.coordinates.actual.x.toFixed(4)}m
+                    </div>
+                    <div className="coord-item">
+                      Y: {visualizationData.coordinates.actual.y.toFixed(4)}m
+                    </div>
+                    <div className="coord-item">
+                      Z: {visualizationData.coordinates.actual.z.toFixed(4)}m
+                    </div>
+                  </div>
+                </div>
+                <div className="coord-section">
+                  <h3 className="coord-heading">📏 Position Error</h3>
+                  <div className="coord-values">
+                    <div className="coord-item">
+                      ΔX: {visualizationData.coordinates.error.x.toFixed(2)}mm
+                    </div>
+                    <div className="coord-item">
+                      ΔY: {visualizationData.coordinates.error.y.toFixed(2)}mm
+                    </div>
+                    <div className="coord-item">
+                      ΔZ: {visualizationData.coordinates.error.z.toFixed(2)}mm
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="accuracy-display">
+                <div className="accuracy-label">Total Euclidean Error:</div>
+                <div className="accuracy-value">
+                  {visualizationData.coordinates.euclidean_distance.toFixed(2)}
+                  mm
+                </div>
+                <div className="accuracy-rating">
+                  {visualizationData.coordinates.accuracy_rating}
+                </div>
+              </div>
+            </div>
+
+            {/* Visualization Graphs */}
+            <div className="card graph-card">
+              <h2 className="card-title">3D End-Effector Position</h2>
+              <img
+                src={visualizationData.plot_3d}
+                alt="3D Plot"
+                className="graph-image"
+              />
+            </div>
+
+            <div className="card graph-card">
+              <h2 className="card-title">XY Plane Projection</h2>
+              <img
+                src={visualizationData.plot_xy}
+                alt="XY Projection"
+                className="graph-image"
+              />
+            </div>
+
+            <div className="card graph-card">
+              <h2 className="card-title">Position Error by Axis</h2>
+              <img
+                src={visualizationData.plot_error}
+                alt="Error Bars"
+                className="graph-image"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
       <div className="content-wrapper">
-        <h1 className="app-title">
-          🤖 Robot Motion Control Predictor
-        </h1>
-        <p className="app-subtitle">AI-Powered Motion Planning & Time Estimation</p>
+        <h1 className="app-title">🤖 Robot Motion Control Predictor</h1>
+        <p className="app-subtitle">
+          AI-Powered Motion Planning & Time Estimation
+        </p>
 
         <div className="grid-container">
           {/* Input Panel */}
           <div className="card control-panel">
             <h2 className="card-title">Control Panel</h2>
-            
+
             <div className="info-box">
               <p className="info-text">
-                <strong>ℹ️ Info:</strong> {motionType === 'Pick & Place' 
-                  ? 'Pick & Place motions focus on accurate positioning.' 
-                  : 'Weld & Inspect motions require precise velocity control.'}
+                <strong>ℹ️ Info:</strong>{" "}
+                {motionType === "Pick & Place"
+                  ? "Pick & Place motions focus on accurate positioning."
+                  : "Weld & Inspect motions require precise velocity control."}
               </p>
             </div>
 
@@ -160,20 +341,22 @@ const RobotMotionControl = () => {
             <div className="form-group-container">
               <div className="form-group">
                 <label className="form-label">Robot Model</label>
-                <select 
+                <select
                   value={selectedRobot}
                   onChange={(e) => setSelectedRobot(e.target.value)}
                   className="form-select"
                 >
-                  {robotModels.map(model => (
-                    <option key={model} value={model}>{model}</option>
+                  {robotModels.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
                 <label className="form-label">Motion Type</label>
-                <select 
+                <select
                   value={motionType}
                   onChange={(e) => setMotionType(e.target.value)}
                   className="form-select"
@@ -237,22 +420,29 @@ const RobotMotionControl = () => {
                   <Plus className="icon-sm" />
                   Add Joint
                 </button>
-                <button
-                  onClick={clearJoints}
-                  className="btn btn-warning"
-                >
+                <button onClick={clearJoints} className="btn btn-warning">
                   <Trash2 className="icon-sm" />
                 </button>
               </div>
 
-              <button
-                onClick={calculateTime}
-                disabled={loading || jointQueue.length === 0}
-                className="btn btn-success btn-full"
-              >
-                <Clock className="icon-sm" />
-                Calculate Total Time
-              </button>
+              <div className="action-buttons">
+                <button
+                  onClick={calculateTime}
+                  disabled={loading || jointQueue.length === 0}
+                  className="btn btn-success"
+                >
+                  <Clock className="icon-sm" />
+                  Calculate Time
+                </button>
+                <button
+                  onClick={visualizeCoords}
+                  disabled={loading || jointQueue.length === 0}
+                  className="btn btn-visualize"
+                >
+                  <BarChart3 className="icon-sm" />
+                  Visualize Coords
+                </button>
+              </div>
             </div>
           </div>
 
@@ -260,12 +450,12 @@ const RobotMotionControl = () => {
           <div className="results-panel">
             {/* Joint Queue */}
             <div className="card">
-              <h2 className="card-title">Joint Queue</h2>
-              
+              <h2 className="card-title">
+                Joint Queue ({jointQueue.length} joints)
+              </h2>
+
               {jointQueue.length === 0 ? (
-                <div className="empty-state">
-                  No joints added yet
-                </div>
+                <div className="empty-state">No joints added yet</div>
               ) : (
                 <div className="joint-list">
                   {jointQueue.map((joint, idx) => (
@@ -273,19 +463,26 @@ const RobotMotionControl = () => {
                       <div className="joint-header">Joint {joint.joint_id}</div>
                       <div className="joint-details">
                         <div className="detail-row">
-                          <strong>Input:</strong> Desired Pos: {joint.desired_position.toFixed(2)}°, 
-                          Desired Vel: {joint.desired_velocity.toFixed(2)}°/s
+                          <strong>Input:</strong> Desired Pos:{" "}
+                          {joint.desired_position.toFixed(2)}°, Desired Vel:{" "}
+                          {joint.desired_velocity.toFixed(2)}°/s
                         </div>
                         <div className="detail-row detail-predicted">
-                          <strong>Predicted:</strong> Actual Pos: {joint.predicted_position.toFixed(2)}°, 
-                          Actual Vel: {joint.predicted_velocity.toFixed(2)}°/s
+                          <strong>Predicted:</strong> Actual Pos:{" "}
+                          {joint.predicted_position.toFixed(2)}°, Actual Vel:{" "}
+                          {joint.predicted_velocity.toFixed(2)}°/s
                         </div>
                         <div className="detail-row">
-                          <strong>Movement:</strong> {joint.current_position.toFixed(2)}° → {joint.predicted_position.toFixed(2)}°
+                          <strong>Movement:</strong>{" "}
+                          {joint.current_position.toFixed(2)}° →{" "}
+                          {joint.predicted_position.toFixed(2)}°
                         </div>
                         <div className="detail-row detail-error">
-                          <strong>Errors:</strong> Pos: {joint.position_error.toFixed(4)}° ({joint.position_error_pct.toFixed(2)}%), 
-                          Vel: {joint.velocity_error.toFixed(4)}°/s ({joint.velocity_error_pct.toFixed(2)}%)
+                          <strong>Errors:</strong> Pos:{" "}
+                          {joint.position_error.toFixed(4)}° (
+                          {joint.position_error_pct.toFixed(2)}%), Vel:{" "}
+                          {joint.velocity_error.toFixed(4)}°/s (
+                          {joint.velocity_error_pct.toFixed(2)}%)
                         </div>
                       </div>
                     </div>
@@ -298,7 +495,7 @@ const RobotMotionControl = () => {
             {timeResult && (
               <div className="card">
                 <h2 className="card-title">Time Estimation Report</h2>
-                
+
                 <div className="time-results">
                   <div className="task-info">
                     <div className="info-item">
@@ -351,7 +548,11 @@ const RobotMotionControl = () => {
 
                   <div className="performance-rating">
                     <span className="rating-label">Performance Rating:</span>
-                    <div className={`rating-value ${getPerformanceRating(timeResult.total_time).color}`}>
+                    <div
+                      className={`rating-value ${
+                        getPerformanceRating(timeResult.total_time).color
+                      }`}
+                    >
                       {getPerformanceRating(timeResult.total_time).icon}
                       {getPerformanceRating(timeResult.total_time).label}
                     </div>
