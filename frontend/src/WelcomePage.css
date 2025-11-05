@@ -1,0 +1,116 @@
+/* ===========================
+   MINIMAL FULLSCREEN WELCOME
+   =========================== */
+.welcome-fullscreen {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  background: 
+    linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+    url('https://plus.unsplash.com/premium_photo-1680608979589-e9349ed066d5?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OXx8aW5kdXN0cmlhbCUyMHJvYm90c3xlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600')
+    center/cover no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ===========================
+   CONTENT CENTER
+   =========================== */
+.welcome-content-center {
+  text-align: center;
+  color: #ffffff;
+  z-index: 2;
+  animation: fadeIn 1.2s ease-out;
+}
+
+/* ===========================
+   TEXT STYLING
+   =========================== */
+.welcome-heading {
+  font-size: 3.2rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  font-weight: 300;
+  color: #e5e7eb;
+  margin-bottom: 40px;
+  letter-spacing: 1px;
+}
+
+/* ===========================
+   START BUTTON
+   =========================== */
+.start-btn {
+  background-color: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 14px 36px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.start-btn:hover {
+  background-color: #1e40af;
+  transform: translateY(-3px);
+}
+
+.start-btn:active {
+  transform: translateY(0);
+}
+
+/* ===========================
+   ANIMATION
+   =========================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===========================
+   RESPONSIVE
+   =========================== */
+@media (max-width: 768px) {
+  .welcome-heading {
+    font-size: 2.5rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .start-btn {
+    padding: 12px 30px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .welcome-heading {
+    font-size: 2rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 30px;
+  }
+
+  .start-btn {
+    padding: 10px 26px;
+  }
+}
